@@ -1,0 +1,64 @@
+name: PR376 AlmaLinux verification
+
+on:
+  push:
+    branches:
+      - codex/qtop-pr376-almalinux-verify
+  workflow_dispatch:
+
+jobs:
+  sample-346:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch requested PBS sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          sample="gef_xwILYNMpoabX4PDGYXIZAA"
+          base="https://raw.githubusercontent.com/fgeorgatos/qtop-test-repo/master/qtop5/results/${sample}"
+          mkdir -p "samples/${sample}"
+          for file in pbsnodes_a.txt qstat.txt qstat_q.txt qtop.out runme.err runme.out; do
+            curl -LfsS --retry 3 --retry-delay 2 -o "samples/${sample}/${file}" "${base}/${file}"
+            test -s "samples/${sample}/${file}"
+          done
+          wc -c samples/${sample}/*
+
+      - name: Run qtop in AlmaLinux 8.10
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            almalinux:8.10 \
+            bash -lc '
+              set -euo pipefail
+              dnf -y -q install python3 findutils
+              python3 --version
+              ./qtop --version || true
+              python3 tools/validate_pbs_samples.py \
+                /work/samples \
+                --limit 1 \
+                --skip-golden-samples \
+                --max-failures 0 \
+                --timeout 20 \
+                --output /work/almalinux-pr376-rendered
+              test -s /work/almalinux-pr376-rendered/gef_xwILYNMpoabX4PDGYXIZAA.ans
+              python3 - <<PY
+import json
+from pathlib import Path
+summary = json.loads(Path("/work/almalinux-pr376-rendered/summary.json").read_text())
+assert summary == {"rendered": 1, "passed": 1, "failed": 0, "scanned": 1}, summary
+print(summary)
+PY
+              sed -n "1,120p" /work/almalinux-pr376-rendered/gef_xwILYNMpoabX4PDGYXIZAA.ans
+            '
+
+      - name: Upload rendered sample
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr376-almalinux-sample-346-rendered
+          path: almalinux-pr376-rendered/
