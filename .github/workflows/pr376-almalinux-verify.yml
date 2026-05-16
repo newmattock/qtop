@@ -43,13 +43,7 @@ jobs:
                 --timeout 20 \
                 --output /work/almalinux-pr376-rendered
               test -s /work/almalinux-pr376-rendered/gef_xwILYNMpoabX4PDGYXIZAA.ans
-              python3 - <<PY
-import json
-from pathlib import Path
-summary = json.loads(Path("/work/almalinux-pr376-rendered/summary.json").read_text())
-assert summary == {"rendered": 1, "passed": 1, "failed": 0, "scanned": 1}, summary
-print(summary)
-PY
+              python3 -c '"'"'import json; from pathlib import Path; summary = json.loads(Path("/work/almalinux-pr376-rendered/summary.json").read_text()); assert summary == {"rendered": 1, "passed": 1, "failed": 0, "scanned": 1}, summary; print(summary)'"'"'
               sed -n "1,120p" /work/almalinux-pr376-rendered/gef_xwILYNMpoabX4PDGYXIZAA.ans
             '
 
