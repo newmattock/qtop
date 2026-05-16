@@ -1,10 +1,6 @@
 name: PR376 AlmaLinux verification
 
-on:
-  push:
-    branches:
-      - codex/qtop-pr376-almalinux-verify
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   sample-346:
